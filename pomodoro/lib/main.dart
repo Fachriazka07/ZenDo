@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'page/splashscreen.dart';
 
 void main() {
@@ -56,26 +57,217 @@ class _PomodoroPageState extends State<PomodoroPage> {
   String _currentAmbience = 'None';
   bool _isAmbiencePlaying = false;
 
+  // Theme state
+  String _currentTheme = 'Coffee'; // Default theme
+
+  // Theme color mappings
+  final Map<String, Map<String, Color>> _themeColors = {
+    'Coffee': {
+      'background': const Color(0xFFFAF3E0),
+      'selectTaskBg': const Color(0xFFFAF3E9),
+      'navbar': const Color(0xFFFAF3E9),
+      'navbarText': const Color(0xFF4A4A4A),
+      'navbarActiveIcon': const Color(0xFF7A5C47),
+      'navbarInactiveIcon': const Color(0xFFD6C4B3),
+      'navbarActiveText': const Color(0xFF7A5C47),
+      'navbarInactiveText': const Color(0xFFD6C4B3),
+      'buttonActive': const Color(0xFFE0C097),
+      'buttonInactive': const Color(0xFFFDF6EC),
+      'buttonInactiveOutline': const Color(0xFFE0C097),
+      'buttonText': const Color(0xFF4A4A4A),
+      'startButton': const Color(0xFFA3B18A),
+      'startButtonText': const Color(0xFFFAFAFA),
+      'pauseButton': const Color(0xFFE6B17E),
+      'continueButton': const Color(0xFFA3B18A),
+      'continueButtonText': const Color(0xFFFAFAFA),
+      'timerTrack': const Color(0xFFCFC1AA),
+      'timerProgress': const Color(0xFFF06C54),
+      'timerText': const Color(0xFF4A4A4A),
+      'timerCircleBg': const Color(0xFFF7EDE2),
+      'dropdownBg': const Color(0xFFFAF3E9),
+      'dropdownBorder': const Color(0xFFE0C097),
+      'dropdownText': const Color(0xFF4A4A4A),
+      'dropdownHover': const Color(0xFFFAF3E0),
+      'iconDefault': const Color(0xFF7A5C47),
+      'iconActive': const Color(0xFF7A5C47),
+      'iconHover': const Color(0xFF7A5C47),
+      'iconText': const Color(0xFF4A4A4A),
+      'stopButton': const Color(0xFFE5989B),
+      // Music overlay specific colors
+      'musicOverlayBg': const Color(0xFFFAF3E9),
+      'musicOverlayIcon': const Color(0xFFF06C54),
+      'musicOverlayText': const Color(0xFF4A4A4A),
+      'musicItemBg': const Color(0xFFFFFFFF),
+      'musicItemIcon': const Color(0xFFF06C54),
+      'musicPlayIcon': const Color(0xFF7A5C47),
+      'musicItemText': const Color(0xFF4A4A4A),
+      'musicItemHover': const Color(0xFFF5F5F5),
+      // Ambience overlay specific colors
+      'ambienceOverlayBg': const Color(0xFFFAF3E9),
+      'ambienceOverlayIcon': const Color(0xFFF06C54),
+      'ambienceOverlayText': const Color(0xFF4A4A4A),
+      'ambienceItemBg': const Color(0xFFFFFFFF),
+      'ambienceItemIcon': const Color(0xFFF06C54),
+      'ambiencePlayIcon': const Color(0xFF7A5C47),
+      'ambienceItemText': const Color(0xFF4A4A4A),
+      'ambienceItemHover': const Color(0xFFF5F5F5),
+    },
+    'Ocean Mist': {
+      'background': const Color(0xFFE8F0F2),
+      'navbar': const Color(0xFF254E58),
+      'navbarText': const Color(0xFFE8F0F2),
+      'navbarActiveIcon': const Color(0xFFA2D5AB),
+      'navbarInactiveIcon': const Color(0xFFE8F0F2),
+      'navbarActiveText': const Color(0xFFA2D5AB),
+      'navbarInactiveText': const Color(0xFFE8F0F2),
+      'buttonActive': const Color(0xFFA2D5AB),
+      'buttonInactive': const Color(0xFFC9D6DF),
+      'buttonText': const Color(0xFF1C2B2D),
+      'startButton': const Color(0xFFA2D5AB),
+      'startButtonText': const Color(0xFFFAFAFA),
+      'pauseButton': const Color(0xFF88BDBC),
+      'continueButton': const Color(0xFFA2D5AB),
+      'continueButtonText': const Color(0xFFFAFAFA),
+      'timerTrack': const Color(0xFF254E58),
+      'timerProgress': const Color(0xFF88BDBC),
+      'timerText': const Color(0xFF1C2B2D),
+      'dropdownBg': const Color(0xFFC9D6DF),
+      'dropdownBorder': const Color(0xFF88BDBC),
+      'dropdownText': const Color(0xFF1C2B2D),
+      'dropdownHover': const Color(0xFFE8F0F2),
+      'iconDefault': const Color(0xFF6E9CA7),
+      'iconActive': const Color(0xFFA2D5AB),
+      'iconHover': const Color(0xFF88BDBC),
+      'iconText': const Color(0xFF1C2B2D),
+      'stopButton': const Color(0xFFFFB6B9),
+      // Music overlay specific colors
+      'musicOverlayBg': const Color(0xFF254E58),
+      'musicOverlayIcon': const Color(0xFFA2D5AB),
+      'musicOverlayText': const Color(0xFFFAFAFA),
+      'musicItemBg': const Color(0xFFC9D6DF),
+      'musicItemIcon': const Color(0xFF88BDBC),
+      'musicPlayIcon': const Color(0xFFA2D5AB),
+      'musicItemText': const Color(0xFF1C2B2D),
+      'musicItemHover': const Color(0xFFB5C3CC),
+      // Ambience overlay specific colors
+      'ambienceOverlayBg': const Color(0xFFE8F0F2),
+      'ambienceOverlayIcon': const Color(0xFF6E9CA7),
+      'ambienceOverlayText': const Color(0xFF1C2B2D),
+      'ambienceItemBg': const Color(0xFFC9D6DF),
+      'ambienceItemIcon': const Color(0xFF88BDBC),
+      'ambiencePlayIcon': const Color(0xFFA2D5AB),
+      'ambienceItemText': const Color(0xFF1C2B2D),
+      'ambienceItemHover': const Color(0xFFB5C3CC),
+    },
+    'Neon Night': {
+      'background': const Color(0xFF0D0D0D),
+      'navbar': const Color(0xFF1A1A1A),
+      'navbarText': const Color(0xFFEAEAEA),
+      'navbarActiveIcon': const Color(0xFFFF2E63),
+      'navbarInactiveIcon': const Color(0xFFEAEAEA),
+      'navbarActiveText': const Color(0xFFFF2E63),
+      'navbarInactiveText': const Color(0xFFEAEAEA),
+      'buttonActive': const Color(0xFF9D4EDD),
+      'buttonInactive': const Color(0xFF2D2D2D),
+      'buttonText': const Color(0xFFFFFFFF),
+      'startButton': const Color(0xFF08D9D6),
+      'startButtonText': const Color(0xFF0D0D0D),
+      'continueButton': const Color(0xFF08D9D6),
+      'continueButtonText': const Color(0xFF0D0D0D),
+      'timerTrack': const Color(0xFF333344),
+      'timerProgress': const Color(0xFF9D4EDD),
+      'timerText': const Color(0xFFFFFFFF),
+      'dropdownBg': const Color(0xFF1A1A1A),
+      'dropdownBorder': const Color(0xFF9D4EDD),
+      'dropdownText': const Color(0xFFFFFFFF),
+      'dropdownHover': const Color(0xFF0D0D0D),
+      'iconDefault': const Color(0xFFA259FF),
+      'iconActive': const Color(0xFFA259FF),
+      'iconHover': const Color(0xFFB983FF),
+      'iconText': const Color(0xFFEEEEEE),
+      'pauseButton': const Color(0xFFFFB400),
+      'stopButton': const Color(0xFFFF4C4C),
+      // Music overlay specific colors
+      'musicOverlayBg': const Color(0xFF1A1A1D),
+      'musicOverlayIcon': const Color(0xFFFF2E63),
+      'musicOverlayText': const Color(0xFFEEEEEE),
+      'musicItemBg': const Color(0xFF302F4D),
+      'musicItemIcon': const Color(0xFFFF2E63),
+      'musicPlayIcon': const Color(0xFFFF2E63),
+      'musicItemText': const Color(0xFFEEEEEE),
+      'musicItemHover': const Color(0xFF3D3B63),
+      // Ambience overlay specific colors
+      'ambienceOverlayBg': const Color(0xFF1B1B2F),
+      'ambienceOverlayIcon': const Color(0xFFA259FF),
+      'ambienceOverlayText': const Color(0xFFEEEEEE),
+      'ambienceItemBg': const Color(0xFF302F4D),
+      'ambienceItemIcon': const Color(0xFFFF2E63),
+      'ambiencePlayIcon': const Color(0xFF08D9D6),
+      'ambienceItemText': const Color(0xFFEEEEEE),
+      'ambienceItemHover': const Color(0xFF3D3B63),
+    },
+  };
+
+  // Get current theme colors
+  Map<String, Color> get _currentThemeColors => _themeColors[_currentTheme]!;
+
   final List<String> musicFiles = [
-    'lofi1.mp3',
-    'Colorful-Flowers.mp3',
-    'silent-wood.mp3',
-    'secret.mp3',
+    'Cant Take My Eyes off You.mp3',
+    'Colorful Flowers.mp3',
+    'silent wood.mp3',
+    'Jay.mp3',
+    'When I Was A Boy.mp3',
+    'slowly.mp3',
+    'On My Way.mp3',
+    'Midnight Stroll.mp3',
+    'gingersweet.mp3',
+    'Rose.mp3',
+    'Midnight Bliss.mp3',
+    'Sunflower.mp3',
+    'Bake A Pie.mp3',
+    'Home.mp3',
   ];
 
   // Tambahkan state untuk music player
   String? _currentMusic;
   bool _isMusicPlaying = false;
+  
+  // AudioPlayer terpisah untuk alarm
+  final AudioPlayer _alarmPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     setMode(TimerMode.pomodoro);
+    _loadTheme(); // Load saved theme
     _audioPlayer.onPlayerComplete.listen((event) {
       if (_currentMusic != null) {
         _playNextMusic();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    _alarmPlayer.dispose();
+    timer?.cancel();
+    super.dispose();
+  }
+
+  // Load theme from SharedPreferences
+  void _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedTheme = prefs.getString('selected_theme') ?? 'Coffee';
+    setState(() {
+      _currentTheme = savedTheme;
+    });
+  }
+
+  // Save theme to SharedPreferences
+  void _saveTheme(String theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_theme', theme);
   }
 
   void setMode(TimerMode mode) {
@@ -91,9 +283,9 @@ class _PomodoroPageState extends State<PomodoroPage> {
   int _modeDuration(TimerMode mode) {
     switch (mode) {
       case TimerMode.pomodoro:
-        return 25 * 60;
+        return 1 * 60;
       case TimerMode.shortBreak:
-        return 5 * 60;
+        return 1 * 60;
       case TimerMode.longBreak:
         return 15 * 60;
     }
@@ -136,7 +328,46 @@ class _PomodoroPageState extends State<PomodoroPage> {
       setMode(TimerMode.pomodoro);
     }
 
-    await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
+    // Simpan volume musik saat ini
+    double originalMusicVolume = 0.5; // Volume default musik
+    bool wasMusicPlaying = _isMusicPlaying;
+    
+    // Jika musik sedang berjalan, turunkan volume secara bertahap (fade out)
+    if (_isMusicPlaying) {
+      for (double volume = originalMusicVolume; volume >= 0.1; volume -= 0.1) {
+        await _audioPlayer.setVolume(volume);
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    }
+    
+    // Set volume alarm lebih keras dan mainkan
+    await _alarmPlayer.setVolume(1.0); // Volume maksimal
+    await _alarmPlayer.play(AssetSource('sounds/alarm.mp3'));
+    
+    // Tunggu alarm selesai dengan Future.delayed
+    _alarmPlayer.getDuration().then((duration) {
+      if (duration != null) {
+        Future.delayed(duration, () {
+          _restoreMusicVolume(wasMusicPlaying, originalMusicVolume);
+        });
+      } else {
+        // Fallback jika durasi tidak bisa didapat (sekitar 3 detik)
+        Future.delayed(const Duration(seconds: 3), () {
+          _restoreMusicVolume(wasMusicPlaying, originalMusicVolume);
+        });
+      }
+    });
+  }
+
+  // Fungsi untuk mengembalikan volume musik secara bertahap (fade in)
+  void _restoreMusicVolume(bool wasMusicPlaying, double originalVolume) async {
+    if (wasMusicPlaying) {
+      // Pastikan volume dikembalikan ke normal tanpa bergantung pada status _isMusicPlaying
+      for (double volume = 0.1; volume <= originalVolume; volume += 0.1) {
+        await _audioPlayer.setVolume(volume);
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    }
   }
 
   String formatTime(int seconds) {
@@ -146,7 +377,16 @@ class _PomodoroPageState extends State<PomodoroPage> {
   }
 
   void _playMusic(String name) async {
+    // Stop ambience if playing to avoid conflict
+    if (_isAmbiencePlaying) {
+      await _ambiencePlayer.stop();
+      setState(() {
+        _isAmbiencePlaying = false;
+        _currentAmbience = 'None';
+      });
+    }
     await _audioPlayer.stop(); // Stop current music before playing new
+    await _audioPlayer.setVolume(0.5); // Set default volume
     await _audioPlayer.play(AssetSource('sounds/music/$name'));
     setState(() {
       _currentMusic = name;
@@ -164,9 +404,18 @@ class _PomodoroPageState extends State<PomodoroPage> {
           _currentAmbience = 'None';
         });
       } else {
+        // Stop music if playing to avoid conflict
+        if (_currentMusic != null) {
+          await _audioPlayer.stop();
+          setState(() {
+            _currentMusic = null;
+            _isMusicPlaying = false;
+          });
+        }
         // Stop current ambience and play new one
         await _ambiencePlayer.stop();
-        await _ambiencePlayer.play(AssetSource(ambienceFile.replaceFirst('assets/', '')));
+        await _ambiencePlayer
+            .play(AssetSource(ambienceFile.replaceFirst('assets/', '')));
         await _ambiencePlayer.setReleaseMode(ReleaseMode.loop);
         setState(() {
           _currentAmbience = ambienceName;
@@ -224,17 +473,10 @@ class _PomodoroPageState extends State<PomodoroPage> {
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.6,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFAF3E9),
-                Color(0xFFF7EDE2),
-              ],
-            ),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-            boxShadow: [
+          decoration: BoxDecoration(
+            color: _currentThemeColors['musicOverlayBg'],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 20,
@@ -250,7 +492,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCFC1AA),
+                  color: _currentThemeColors['dropdownBorder'],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -265,19 +507,19 @@ class _PomodoroPageState extends State<PomodoroPage> {
                         color: const Color(0xFFF06C54).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.music_note,
-                        color: Color(0xFFF06C54),
+                        color: _currentThemeColors['musicOverlayIcon'],
                         size: 24,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Choose Music',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4A4A),
+                        color: _currentThemeColors['musicOverlayText'],
                         decoration: TextDecoration.none,
                       ),
                     ),
@@ -295,12 +537,14 @@ class _PomodoroPageState extends State<PomodoroPage> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: isSelected 
-                            ? const Color(0xFFF06C54).withOpacity(0.1)
-                            : Colors.white.withOpacity(0.7),
+                        color: isSelected
+                            ? _currentThemeColors['musicItemHover']
+                            : _currentThemeColors['musicItemBg'],
                         borderRadius: BorderRadius.circular(16),
                         border: isSelected
-                            ? Border.all(color: const Color(0xFFF06C54), width: 2)
+                            ? Border.all(
+                                color: _currentThemeColors['musicOverlayIcon']!,
+                                width: 2)
                             : null,
                         boxShadow: [
                           BoxShadow(
@@ -319,16 +563,12 @@ class _PomodoroPageState extends State<PomodoroPage> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: isSelected
-                                  ? [const Color(0xFFF06C54), const Color(0xFFFF8A65)]
-                                  : [const Color(0xFFCFC1AA), const Color(0xFFE8DCC6)],
-                            ),
+                            color: _currentThemeColors['musicItemBg'],
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
                             isSelected ? Icons.music_note : Icons.audiotrack,
-                            color: Colors.white,
+                            color: _currentThemeColors['musicItemIcon'],
                             size: 24,
                           ),
                         ),
@@ -336,22 +576,21 @@ class _PomodoroPageState extends State<PomodoroPage> {
                           name.replaceAll('.mp3', ''),
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            color: isSelected 
-                                ? const Color(0xFFF06C54)
-                                : const Color(0xFF4A4A4A),
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: _currentThemeColors['musicItemText'],
                             decoration: TextDecoration.none,
                           ),
                         ),
                         trailing: isSelected
-                            ? const Icon(
+                            ? Icon(
                                 Icons.check_circle,
-                                color: Color(0xFFF06C54),
+                                color: _currentThemeColors['musicOverlayIcon'],
                                 size: 24,
                               )
-                            : const Icon(
+                            : Icon(
                                 Icons.play_circle_outline,
-                                color: Color(0xFF7A5C47),
+                                color: _currentThemeColors['musicPlayIcon'],
                                 size: 24,
                               ),
                         onTap: () {
@@ -364,6 +603,225 @@ class _PomodoroPageState extends State<PomodoroPage> {
                 ),
               ),
               const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showThemeBottomSheet(BuildContext context) {
+    final List<Map<String, dynamic>> themeList = [
+      {
+        'name': 'Coffee',
+        'icon': Icons.coffee,
+        'color': const Color(0xFF8B4513),
+        'description': 'Warm coffee vibes',
+      },
+      {
+        'name': 'Ocean Mist',
+        'icon': Icons.waves,
+        'color': const Color(0xFF254E58),
+        'description': 'Cool ocean breeze',
+      },
+      {
+        'name': 'Neon Night',
+        'icon': Icons.nights_stay,
+        'color': const Color(0xFF7C3AED),
+        'description': 'Dark neon aesthetic',
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          decoration: BoxDecoration(
+            color: _currentThemeColors['dropdownBg'],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 20,
+                offset: Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _currentThemeColors['dropdownBorder'],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _currentThemeColors['dropdownBg'],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.palette,
+                        color: _currentThemeColors['iconActive'],
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Choose Theme',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: _currentThemeColors['dropdownText'],
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Theme list
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: themeList.length,
+                  itemBuilder: (context, index) {
+                    final theme = themeList[index];
+                    final isSelected = _currentTheme == theme['name'];
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                        color: isSelected
+                            ? _currentThemeColors['buttonActive']
+                            : _currentThemeColors['dropdownBg'],
+                        border: isSelected
+                            ? Border.all(
+                                color: _currentThemeColors['dropdownBorder']!,
+                                width: 2)
+                            : null,
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Color preview circle
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: theme['color'],
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Theme icon
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    theme['color'].withOpacity(0.2),
+                                    theme['color'].withOpacity(0.1),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                theme['icon'],
+                                color: theme['color'],
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                        title: Text(
+                          theme['name'],
+                          style: TextStyle(
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected
+                                ? _currentThemeColors['buttonText']
+                                : _currentThemeColors['dropdownText'],
+                            fontFamily: 'Poppins',
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: Text(
+                          theme['description'],
+                          style: TextStyle(
+                            color: _currentThemeColors['dropdownText']!
+                                .withOpacity(0.7),
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Icon(
+                          isSelected
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          color: isSelected
+                              ? _currentThemeColors['iconActive']
+                              : _currentThemeColors['iconDefault'],
+                          size: 24,
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _currentTheme = theme['name'];
+                          });
+                          _saveTheme(theme['name']);
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Theme changed to ${theme['name']}',
+                                style: const TextStyle(fontFamily: 'Poppins'),
+                              ),
+                              backgroundColor: theme['color'],
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         );
@@ -398,7 +856,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
         'name': 'White Noise',
         'icon': Icons.graphic_eq,
         'color': const Color(0xFF9E9E9E),
-        'description': 'Focus enhancing sounds',
+        'description': 'Focus enhancing',
         'file': 'assets/sounds/ambience/whitenoise.mp3'
       },
       {
@@ -424,17 +882,10 @@ class _PomodoroPageState extends State<PomodoroPage> {
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFAF3E9),
-                Color(0xFFF7EDE2),
-              ],
-            ),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-            boxShadow: [
+          decoration: BoxDecoration(
+            color: _currentThemeColors['ambienceOverlayBg'],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 20,
@@ -462,22 +913,23 @@ class _PomodoroPageState extends State<PomodoroPage> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF06C54).withOpacity(0.1),
+                        color: _currentThemeColors['ambienceOverlayIcon']!
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.nature_people,
-                        color: Color(0xFFF06C54),
+                        color: _currentThemeColors['ambienceOverlayIcon'],
                         size: 24,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Choose Ambience',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4A4A),
+                        color: _currentThemeColors['ambienceOverlayText'],
                         decoration: TextDecoration.none,
                       ),
                     ),
@@ -496,56 +948,56 @@ class _PomodoroPageState extends State<PomodoroPage> {
                   ),
                   itemCount: ambienceList.length,
                   itemBuilder: (context, index) {
-                     final ambience = ambienceList[index];
-                     final isCurrentlyPlaying = _currentAmbience == ambience['name'] && _isAmbiencePlaying;
-                     return Container(
-                       decoration: BoxDecoration(
-                         gradient: LinearGradient(
-                           begin: Alignment.topLeft,
-                           end: Alignment.bottomRight,
-                           colors: isCurrentlyPlaying ? [
-                             ambience['color'].withOpacity(0.3),
-                             ambience['color'].withOpacity(0.1),
-                           ] : [
-                             Colors.white.withOpacity(0.9),
-                             ambience['color'].withOpacity(0.1),
-                           ],
-                         ),
-                         borderRadius: BorderRadius.circular(20),
-                         border: isCurrentlyPlaying ? Border.all(
-                           color: ambience['color'],
-                           width: 2,
-                         ) : null,
-                         boxShadow: [
-                           BoxShadow(
-                             color: isCurrentlyPlaying ? 
-                               ambience['color'].withOpacity(0.3) : 
-                               Colors.black.withOpacity(0.08),
-                             blurRadius: isCurrentlyPlaying ? 16 : 12,
-                             offset: const Offset(0, 4),
-                           ),
-                         ],
-                       ),
+                    final ambience = ambienceList[index];
+                    final isCurrentlyPlaying =
+                        _currentAmbience == ambience['name'] &&
+                            _isAmbiencePlaying;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: isCurrentlyPlaying
+                            ? _currentThemeColors['ambienceItemHover']
+                            : _currentThemeColors['ambienceItemBg'],
+                        borderRadius: BorderRadius.circular(20),
+                        border: isCurrentlyPlaying
+                            ? Border.all(
+                                color:
+                                    _currentThemeColors['ambienceOverlayIcon']!,
+                                width: 2,
+                              )
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isCurrentlyPlaying
+                                ? _currentThemeColors['ambienceOverlayIcon']!
+                                    .withOpacity(0.3)
+                                : Colors.black.withOpacity(0.08),
+                            blurRadius: isCurrentlyPlaying ? 16 : 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(20),
                           onTap: () {
-                            final wasPlaying = _currentAmbience == ambience['name'] && _isAmbiencePlaying;
-                             _playAmbience(ambience['name'], ambience['file']);
-                             Navigator.pop(context);
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               SnackBar(
-                                 content: Text(wasPlaying ? 
-                                   'Stopped ${ambience['name']}' : 
-                                   'Playing ${ambience['name']}'),
-                                 backgroundColor: ambience['color'],
-                                 behavior: SnackBarBehavior.floating,
-                                 shape: RoundedRectangleBorder(
-                                   borderRadius: BorderRadius.circular(12),
-                                 ),
-                               ),
-                             );
+                            final wasPlaying =
+                                _currentAmbience == ambience['name'] &&
+                                    _isAmbiencePlaying;
+                            _playAmbience(ambience['name'], ambience['file']);
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(wasPlaying
+                                    ? 'Stopped ${ambience['name']}'
+                                    : 'Playing ${ambience['name']}'),
+                                backgroundColor: ambience['color'],
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(16),
@@ -553,67 +1005,71 @@ class _PomodoroPageState extends State<PomodoroPage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                   width: 56,
-                                   height: 56,
-                                   decoration: BoxDecoration(
-                                     gradient: LinearGradient(
-                                       colors: [
-                                         ambience['color'],
-                                         ambience['color'].withOpacity(0.7),
-                                       ],
-                                     ),
-                                     borderRadius: BorderRadius.circular(16),
-                                     boxShadow: [
-                                       BoxShadow(
-                                         color: ambience['color'].withOpacity(0.3),
-                                         blurRadius: 8,
-                                         offset: const Offset(0, 4),
-                                       ),
-                                     ],
-                                   ),
-                                   child: Stack(
-                                     alignment: Alignment.center,
-                                     children: [
-                                       Icon(
-                                         ambience['icon'],
-                                         color: Colors.white,
-                                         size: 28,
-                                       ),
-                                       if (isCurrentlyPlaying)
-                                         Positioned(
-                                           bottom: 2,
-                                           right: 2,
-                                           child: Container(
-                                             width: 16,
-                                             height: 16,
-                                             decoration: BoxDecoration(
-                                               color: Colors.white,
-                                               borderRadius: BorderRadius.circular(8),
-                                               boxShadow: [
-                                                 BoxShadow(
-                                                   color: Colors.black.withOpacity(0.2),
-                                                   blurRadius: 4,
-                                                   offset: const Offset(0, 2),
-                                                 ),
-                                               ],
-                                             ),
-                                             child: Icon(
-                                               Icons.pause,
-                                               color: ambience['color'],
-                                               size: 12,
-                                             ),
-                                           ),
-                                         ),
-                                     ],
-                                   ),
-                                 ),
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        _currentThemeColors['ambienceItemBg'],
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _currentThemeColors[
+                                                'ambienceItemIcon']!
+                                            .withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Icon(
+                                        ambience['icon'],
+                                        color: _currentThemeColors[
+                                            'ambienceItemIcon'],
+                                        size: 28,
+                                      ),
+                                      if (isCurrentlyPlaying)
+                                        Positioned(
+                                          bottom: 2,
+                                          right: 2,
+                                          child: Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: _currentThemeColors[
+                                                  'ambienceOverlayBg'],
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.2),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              Icons.pause,
+                                              color: _currentThemeColors[
+                                                  'ambiencePlayIcon'],
+                                              size: 12,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                                 const SizedBox(height: 12),
                                 Text(
                                   ambience['name'],
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF4A4A4A),
+                                    color:
+                                        _currentThemeColors['ambienceItemText'],
                                     decoration: TextDecoration.none,
                                   ),
                                   textAlign: TextAlign.center,
@@ -623,7 +1079,8 @@ class _PomodoroPageState extends State<PomodoroPage> {
                                   ambience['description'],
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: const Color(0xFF7A5C47).withOpacity(0.8),
+                                    color: _currentThemeColors[
+                                        'ambienceItemText']!,
                                     decoration: TextDecoration.none,
                                   ),
                                   textAlign: TextAlign.center,
@@ -651,213 +1108,244 @@ class _PomodoroPageState extends State<PomodoroPage> {
   Widget build(BuildContext context) {
     final progress = 1 - (secondsLeft / totalSeconds);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF3E0),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 20), // hanya padding samping dan bawah
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            isDropdownOpen = !isDropdownOpen;
-                          });
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFAF3E9),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(
-                                    left: 24, top: 11, bottom: 11),
-                                child: Text(
-                                  "Select Task",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF4A4A4A),
-                                    fontWeight: FontWeight.w600,
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    right: 24, top: 14, bottom: 14),
-                                child: AnimatedRotation(
-                                  turns: isDropdownOpen ? 0.5 : 0.0,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: const Icon(
-                                    Icons.arrow_drop_down,
-                                    size: 24,
-                                    color: Color(0xFF4A4A4A),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Mode Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return AnimatedTheme(
+        duration: const Duration(milliseconds: 300),
+        data: ThemeData(
+          scaffoldBackgroundColor: _currentThemeColors['background'],
+        ),
+        child: Scaffold(
+          backgroundColor: _currentThemeColors['background'],
+          body: SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 20), // hanya padding samping dan bawah
+                    child: SingleChildScrollView(
+                      child: Column(
                         children: [
-                          _buildModeButton("Pomodoro", TimerMode.pomodoro),
-                          _buildModeButton("Short Break", TimerMode.shortBreak),
-                          _buildModeButton("Long Break", TimerMode.longBreak),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Timer Circle
-                      Container(
-                        width: 360,
-                        height: 360,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF7EDE2),
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: SizedBox(
-                          width: 332,
-                          height: 332,
-                          child: CustomPaint(
-                            painter: TimerPainter(
-                              progress: secondsLeft / totalSeconds,
-                              baseColor: const Color(0xFFCFC1AA),
-                              progressColor: const Color(0xFFF06C54),
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                isDropdownOpen = !isDropdownOpen;
+                              });
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: _currentThemeColors['dropdownBg'],
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    formatTime(secondsLeft),
-                                    style: const TextStyle(
-                                      fontFamily: 'Digital7',
-                                      fontSize: 100,
-                                      color: Color(0xFF4A4A4A),
-                                      decoration: TextDecoration.none,
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 24, top: 11, bottom: 11),
+                                    child: Text(
+                                      "Select Task",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color:
+                                            _currentThemeColors['dropdownText'],
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.none,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "${sessionCount % 4 + 1} of 4 Sessions",
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      color: Color(0xFF4A4A4A),
-                                      decoration: TextDecoration.none,
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        right: 24, top: 14, bottom: 14),
+                                    child: AnimatedRotation(
+                                      turns: isDropdownOpen ? 0.5 : 0.0,
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      child: const Icon(
+                                        Icons.arrow_drop_down,
+                                        size: 24,
+                                        color: Color(0xFF4A4A4A),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                      ),
 
-                      const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                      // Control Buttons
-                      if (!isRunning && secondsLeft == totalSeconds)
-                        _buildMainButton("Start", const Color(0xFFA3B18A),
-                            const Color(0xFFFAFAFA), startTimer)
-                      else if (isRunning)
-                        _buildOutlineButton(
-                            "Pause", const Color(0xFFE6B17E), pauseTimer)
-                      else
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 160,
-                              child: _buildOutlineButton(
-                                  "Stop", const Color(0xFFE5989B), stopTimer),
+                          // Mode Buttons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildModeButton("Pomodoro", TimerMode.pomodoro),
+                              _buildModeButton(
+                                  "Short Break", TimerMode.shortBreak),
+                              _buildModeButton(
+                                  "Long Break", TimerMode.longBreak),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Timer Circle
+                          Container(
+                            width: 360,
+                            height: 360,
+                            decoration: BoxDecoration(
+                              color: _currentThemeColors['buttonInactive'],
+                              shape: BoxShape.circle,
                             ),
-                            const SizedBox(width: 16),
-                            SizedBox(
-                              width: 160,
-                              child: _buildMainButton(
-                                  "Start",
-                                  const Color(0xFFA3B18A),
-                                  const Color(0xFFFAFAFA),
-                                  startTimer),
-                            ),
-                          ],
-                        ),
-
-                      const SizedBox(height: 50),
-
-                      // Icons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          const Expanded(
-                              child: _IconWithLabel(
-                                  icon: Icons.palette, label: "Theme")),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => _showMusicListOverlay(context),
-                              child: const _IconWithLabel(
-                                  icon: Icons.music_note, label: "Music"),
+                            alignment: Alignment.center,
+                            child: SizedBox(
+                              width: 332,
+                              height: 332,
+                              child: CustomPaint(
+                                painter: TimerPainter(
+                                  progress: secondsLeft / totalSeconds,
+                                  baseColor: _currentThemeColors['timerTrack']!,
+                                  progressColor:
+                                      _currentThemeColors['timerProgress']!,
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        formatTime(secondsLeft),
+                                        style: TextStyle(
+                                          fontFamily: 'Digital7',
+                                          fontSize: 100,
+                                          color:
+                                              _currentThemeColors['timerText'],
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        "${sessionCount % 4 + 1} of 4 Sessions",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color:
+                                              _currentThemeColors['timerText'],
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => _showAmbienceBottomSheet(context),
-                              child: const _IconWithLabel(
-                                  icon: Icons.cloud, label: "Ambience"),
+
+                          const SizedBox(height: 24),
+
+                          // Control Buttons
+                          if (!isRunning && secondsLeft == totalSeconds)
+                            _buildMainButton(
+                                "Start",
+                                _currentThemeColors['startButton']!,
+                                _currentThemeColors['startButtonText']!,
+                                startTimer)
+                          else if (isRunning)
+                            _buildOutlineButton("Pause",
+                                _currentThemeColors['pauseButton']!, pauseTimer)
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 160,
+                                  child: _buildOutlineButton(
+                                      "Stop",
+                                      _currentThemeColors['stopButton']!,
+                                      stopTimer),
+                                ),
+                                const SizedBox(width: 16),
+                                SizedBox(
+                                  width: 160,
+                                  child: _buildMainButton(
+                                      "Start",
+                                      _currentThemeColors['continueButton']!,
+                                      _currentThemeColors[
+                                          'continueButtonText']!,
+                                      startTimer),
+                                ),
+                              ],
                             ),
+
+                          const SizedBox(height: 50),
+
+                          // Icons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _showThemeBottomSheet(context),
+                                  child: _IconWithLabel(
+                                      icon: Icons.palette,
+                                      label: "Theme",
+                                      themeColors: _currentThemeColors),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _showMusicListOverlay(context),
+                                  child: _IconWithLabel(
+                                      icon: Icons.music_note,
+                                      label: "Music",
+                                      themeColors: _currentThemeColors),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      _showAmbienceBottomSheet(context),
+                                  child: _IconWithLabel(
+                                      icon: Icons.cloud,
+                                      label: "Ambience",
+                                      themeColors: _currentThemeColors),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                // Persistent music player above navbar
+                if (_currentMusic != null)
+                  GestureDetector(
+                    onTap: () => _showMusicListOverlay(context),
+                    child: MusicPlayerWidget(
+                      musicName: _currentMusic!,
+                      isPlaying: _isMusicPlaying,
+                      onPause: _pauseMusic,
+                      onResume: _resumeMusic,
+                      onNext: _playNextMusic,
+                      onPrev: _playPrevMusic,
+                      onClose: _closeMusicPlayer,
+                      themeColors: _currentThemeColors,
+                    ),
+                  ),
+                DummyNavbar(themeColors: _currentThemeColors),
+              ],
             ),
-            // Persistent music player above navbar
-            if (_currentMusic != null)
-              GestureDetector(
-                onTap: () => _showMusicListOverlay(context),
-                child: MusicPlayerWidget(
-                  musicName: _currentMusic!,
-                  isPlaying: _isMusicPlaying,
-                  onPause: _pauseMusic,
-                  onResume: _resumeMusic,
-                  onNext: _playNextMusic,
-                  onPrev: _playPrevMusic,
-                  onClose: _closeMusicPlayer,
-                ),
-              ),
-            const DummyNavbar(),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 
   Widget _buildModeButton(String text, TimerMode mode) {
@@ -869,18 +1357,21 @@ class _PomodoroPageState extends State<PomodoroPage> {
         height: 46,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE0C097) : const Color(0xFFFDF6EC),
+          color: isSelected
+              ? _currentThemeColors['buttonActive']
+              : _currentThemeColors['buttonInactive'],
           borderRadius: BorderRadius.circular(20),
-          border:
-              isSelected ? null : Border.all(color: const Color(0xFFE0C097)),
+          border: isSelected
+              ? null
+              : Border.all(color: _currentThemeColors['buttonActive']!),
           boxShadow: isSelected
               ? [const BoxShadow(color: Colors.black26, blurRadius: 4)]
               : [],
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            color: Color(0xFF4A4A4A),
+          style: TextStyle(
+            color: _currentThemeColors['buttonText'],
             fontSize: 14,
             fontWeight: FontWeight.w600,
             decoration: TextDecoration.none,
@@ -989,18 +1480,20 @@ class TimerPainter extends CustomPainter {
 class _IconWithLabel extends StatelessWidget {
   final IconData icon;
   final String label;
+  final Map<String, Color> themeColors;
 
-  const _IconWithLabel({required this.icon, required this.label});
+  const _IconWithLabel(
+      {required this.icon, required this.label, required this.themeColors});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: const Color(0xFF7A5C47)),
+        Icon(icon, color: themeColors['iconDefault']),
         const SizedBox(height: 0),
         Text(label,
-            style: const TextStyle(
-              color: Color(0xFF4A4A4A),
+            style: TextStyle(
+              color: themeColors['iconText'],
               fontSize: 14,
               fontWeight: FontWeight.w600,
               decoration: TextDecoration.none,
@@ -1012,7 +1505,9 @@ class _IconWithLabel extends StatelessWidget {
 
 class DummyNavbar extends StatelessWidget {
   final int activeIndex;
-  const DummyNavbar({super.key, this.activeIndex = 0});
+  final Map<String, Color> themeColors;
+  const DummyNavbar(
+      {super.key, this.activeIndex = 0, required this.themeColors});
 
   @override
   Widget build(BuildContext context) {
@@ -1042,7 +1537,7 @@ class DummyNavbar extends StatelessWidget {
       width: double.infinity,
       height: 100,
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF3E9),
+        color: themeColors['navbar'],
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
@@ -1059,10 +1554,12 @@ class DummyNavbar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: List.generate(items.length, (i) {
           final isActive = i == activeIndex;
-          final iconColor =
-              isActive ? const Color(0xFF7A5C47) : const Color(0xFFD6C4B3);
-          final textColor =
-              isActive ? const Color(0xFF7A5C47) : const Color(0xFFD6C4B3);
+          final iconColor = isActive
+              ? themeColors['navbarActiveIcon']
+              : themeColors['navbarInactiveIcon'];
+          final textColor = isActive
+              ? themeColors['navbarActiveText']
+              : themeColors['navbarInactiveText'];
           return Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1096,6 +1593,7 @@ class MusicPlayerWidget extends StatefulWidget {
   final VoidCallback onNext;
   final VoidCallback onPrev;
   final VoidCallback onClose;
+  final Map<String, Color> themeColors;
 
   const MusicPlayerWidget({
     super.key,
@@ -1106,6 +1604,7 @@ class MusicPlayerWidget extends StatefulWidget {
     required this.onNext,
     required this.onPrev,
     required this.onClose,
+    required this.themeColors,
   });
 
   @override
@@ -1124,7 +1623,7 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF3E9),
+        color: widget.themeColors['musicOverlayBg']!,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -1138,11 +1637,11 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
         children: [
           Expanded(
             child: Text(
-              widget.musicName,
-              style: const TextStyle(
+              widget.musicName.replaceAll('.mp3', ''),
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF4A4A4A),
+                color: widget.themeColors['musicOverlayText']!,
                 decoration: TextDecoration.none,
               ),
               overflow: TextOverflow.ellipsis,
@@ -1153,9 +1652,7 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
             onExit: (_) => setState(() => _hoverPrev = false),
             child: IconButton(
               icon: Icon(Icons.skip_previous,
-                  color: _hoverPrev
-                      ? const Color(0xFFF06C54)
-                      : const Color(0xFF7A5C47)),
+                  color: widget.themeColors['musicOverlayIcon']!),
               onPressed: widget.onPrev,
               tooltip: 'Previous',
             ),
@@ -1166,9 +1663,7 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
             child: IconButton(
               icon: Icon(
                 widget.isPlaying ? Icons.pause : Icons.play_arrow,
-                color: _hoverPlay
-                    ? const Color(0xFFF06C54)
-                    : const Color(0xFF7A5C47),
+                color: widget.themeColors['musicOverlayIcon']!,
               ),
               onPressed: widget.isPlaying ? widget.onPause : widget.onResume,
               tooltip: widget.isPlaying ? 'Pause' : 'Resume',
@@ -1179,9 +1674,7 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
             onExit: (_) => setState(() => _hoverNext = false),
             child: IconButton(
               icon: Icon(Icons.skip_next,
-                  color: _hoverNext
-                      ? const Color(0xFFF06C54)
-                      : const Color(0xFF7A5C47)),
+                  color: widget.themeColors['musicOverlayIcon']!),
               onPressed: widget.onNext,
               tooltip: 'Next',
             ),
@@ -1191,7 +1684,7 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
             onExit: (_) => setState(() => _hoverClose = false),
             child: IconButton(
               icon: Icon(Icons.close,
-                  color: _hoverClose ? Colors.red : const Color(0xFF7A5C47)),
+                  color: widget.themeColors['musicOverlayIcon']!),
               onPressed: widget.onClose,
               tooltip: 'Close',
             ),
