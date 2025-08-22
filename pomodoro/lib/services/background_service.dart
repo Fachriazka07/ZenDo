@@ -40,9 +40,7 @@ class BackgroundService {
           isForegroundMode: true,
           notificationChannelId: 'pomodoro_timer_channel',
           initialNotificationTitle: 'ZenDo Pomodoro Timer',
-          initialNotificationContent: hasPermission
-              ? 'Timer ready with exact alarms permission'
-              : 'Timer running in foreground service mode',
+          initialNotificationContent: '',
         ),
         iosConfiguration: IosConfiguration(
           autoStart: false,

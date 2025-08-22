@@ -2,11 +2,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   static const String channelId = 'pomodoro_channel';
   static const String channelName = 'Pomodoro Notifications';
   static const String channelDescription = 'Notifications for Pomodoro timer';
-  
+
   // Throttling variables to prevent notification spam
   static DateTime? _lastNotificationUpdate;
   static const Duration _notificationThrottle = Duration(seconds: 5);
@@ -14,7 +15,7 @@ class NotificationService {
   static Future<void> initialize() async {
     // Android initialization
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     // iOS initialization
     const DarwinInitializationSettings initializationSettingsIOS =
@@ -52,12 +53,12 @@ class NotificationService {
     );
 
     await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
   }
 
   static void _onNotificationTapped(NotificationResponse response) {
-    print('Notification tapped: ${response.payload}');
     // Handle notification tap if needed
   }
 
@@ -72,15 +73,18 @@ class NotificationService {
     if (!force) {
       final now = DateTime.now();
       if (_lastNotificationUpdate != null &&
-          now.difference(_lastNotificationUpdate!) < const Duration(seconds: 1)) {
+          now.difference(_lastNotificationUpdate!) <
+              const Duration(seconds: 1)) {
         return; // Skip update if less than 1 second since last update
       }
       _lastNotificationUpdate = now;
     }
     // Calculate progress percentage
-    int progressPercentage = ((maxProgress - progress) / maxProgress * 100).round();
-    
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    int progressPercentage =
+        ((maxProgress - progress) / maxProgress * 100).round();
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       channelId,
       channelName,
       channelDescription: channelDescription,
@@ -91,7 +95,7 @@ class NotificationService {
       showProgress: true,
       maxProgress: 100,
       indeterminate: false,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       silent: true, // No sound for timer progress notifications
     );
 
@@ -100,7 +104,8 @@ class NotificationService {
     );
 
     // Create new AndroidNotificationDetails with progress
-    final AndroidNotificationDetails progressAndroidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails progressAndroidDetails =
+        AndroidNotificationDetails(
       channelId,
       channelName,
       channelDescription: channelDescription,
@@ -112,7 +117,7 @@ class NotificationService {
       maxProgress: 100,
       progress: progressPercentage,
       indeterminate: false,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       silent: true, // No sound for timer progress notifications
     );
 
@@ -132,13 +137,14 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       channelId,
       channelName,
       channelDescription: channelDescription,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       playSound: true, // Enable sound for completion notifications
       enableVibration: true,
       autoCancel: true, // Allow user to dismiss this notification

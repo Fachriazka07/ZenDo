@@ -48,7 +48,7 @@ class PomodoroApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFFAF3E0),
         fontFamily: 'Poppins',
       ),
-      initialRoute: '/home',
+      initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
         '/home': (context) => const PomodoroPage(),
