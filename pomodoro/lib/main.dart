@@ -3,11 +3,33 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'page/splashscreen.dart';
+import 'services/notification_service.dart';
+import 'services/background_service.dart';
+import 'services/permission_service.dart';
+import 'models/pomodoro_state.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize flutter_local_notifications
+  // This will be handled by NotificationService.initialize()
+
+  // Initialize permission service first
+  await PermissionService.initialize();
+
+  // Initialize notification service
+  await NotificationService.initialize();
+
+  // Initialize background service
+  await BackgroundService.initialize();
+
   runApp(const PomodoroApp());
 }
+
+// Notification action controller for flutter_local_notifications
+// Action handling will be implemented in NotificationService
 
 class PomodoroApp extends StatelessWidget {
   const PomodoroApp({super.key});
@@ -26,7 +48,7 @@ class PomodoroApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFFAF3E0),
         fontFamily: 'Poppins',
       ),
-      initialRoute: '/',
+      initialRoute: '/home',
       routes: {
         '/': (context) => const SplashScreen(),
         '/home': (context) => const PomodoroPage(),
@@ -58,11 +80,11 @@ class _PomodoroPageState extends State<PomodoroPage> {
   bool _isAmbiencePlaying = false;
 
   // Theme state
-  String _currentTheme = 'Coffee'; // Default theme
+  String _currentTheme = 'Caramel Latte';
 
   // Theme color mappings
   final Map<String, Map<String, Color>> _themeColors = {
-    'Coffee': {
+    'Caramel Latte': {
       'background': const Color(0xFFFAF3E0),
       'selectTaskBg': const Color(0xFFFAF3E9),
       'navbar': const Color(0xFFFAF3E9),
@@ -231,7 +253,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
   // Tambahkan state untuk music player
   String? _currentMusic;
   bool _isMusicPlaying = false;
-  
+
   // AudioPlayer terpisah untuk alarm
   final AudioPlayer _alarmPlayer = AudioPlayer();
 
@@ -245,6 +267,10 @@ class _PomodoroPageState extends State<PomodoroPage> {
         _playNextMusic();
       }
     });
+
+    // Notification service will be handled by flutter_local_notifications
+    print(
+        '[Main] Notification service initialized with flutter_local_notifications');
   }
 
   @override
@@ -258,7 +284,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
   // Load theme from SharedPreferences
   void _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedTheme = prefs.getString('selected_theme') ?? 'Coffee';
+    final savedTheme = prefs.getString('selected_theme') ?? 'Caramel Latte';
     setState(() {
       _currentTheme = savedTheme;
     });
@@ -285,38 +311,79 @@ class _PomodoroPageState extends State<PomodoroPage> {
       case TimerMode.pomodoro:
         return 1 * 60;
       case TimerMode.shortBreak:
-        return 1 * 60;
+        return 5 * 60;
       case TimerMode.longBreak:
         return 15 * 60;
     }
   }
 
-  void startTimer() {
+  void startTimer() async {
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (secondsLeft > 0) {
         setState(() => secondsLeft--);
+        _updateNotification(); // Update notification every second for countdown
       } else {
         timer?.cancel();
         _handleTimerEnd();
       }
     });
     setState(() => isRunning = true);
+
+    // Show initial timer notification only once when starting
+    _updateNotification(force: true);
   }
 
-  void pauseTimer() {
+  void pauseTimer() async {
     timer?.cancel();
     setState(() => isRunning = false);
+
+    // Send pause notification dengan force=true
+    _updateNotification(force: true);
   }
 
-  void stopTimer() {
+  void stopTimer() async {
     timer?.cancel();
     setState(() {
       secondsLeft = totalSeconds;
       isRunning = false;
     });
+
+    // Cancel notification when timer is stopped
+    try {
+      await NotificationService.cancelTimerNotification();
+    } catch (e) {
+      print('Error canceling notification: $e');
+    }
   }
 
   void _handleTimerEnd() async {
+    // Play alarm sound
+    _playAlarm();
+
+    // Show completion notification with sound
+    String completedModeText = '';
+    switch (currentMode) {
+      case TimerMode.pomodoro:
+        completedModeText = 'Pomodoro';
+        break;
+      case TimerMode.shortBreak:
+        completedModeText = 'Short Break';
+        break;
+      case TimerMode.longBreak:
+        completedModeText = 'Long Break';
+        break;
+    }
+
+    try {
+      await NotificationService.showSessionCompleteNotification(
+        title: '$completedModeText Completed!',
+        body: 'Time to take a break or start the next session.',
+      );
+    } catch (e) {
+      print('Error showing completion notification: $e');
+    }
+
+    // Determine next session and update mode
     if (currentMode == TimerMode.pomodoro) {
       sessionCount++;
       if (sessionCount % 4 == 0) {
@@ -328,10 +395,57 @@ class _PomodoroPageState extends State<PomodoroPage> {
       setMode(TimerMode.pomodoro);
     }
 
+    // Cancel current timer notification since timer ended
+    try {
+      await NotificationService.cancelTimerNotification();
+    } catch (e) {
+      print('Error canceling notification: $e');
+    }
+  }
+
+  // Update notification with current timer state using flutter_local_notifications
+  void _updateNotification({bool force = false}) {
+    try {
+      String modeText = '';
+      switch (currentMode) {
+        case TimerMode.pomodoro:
+          modeText = 'Pomodoro';
+          break;
+        case TimerMode.shortBreak:
+          modeText = 'Short Break';
+          break;
+        case TimerMode.longBreak:
+          modeText = 'Long Break';
+          break;
+      }
+
+      String status = isRunning ? "Running" : "Paused";
+      String timeText =
+          '${(secondsLeft ~/ 60).toString().padLeft(2, '0')}:${(secondsLeft % 60).toString().padLeft(2, '0')}';
+
+      // Update notification using flutter_local_notifications
+      NotificationService.showTimerNotification(
+        title: '$modeText - $status',
+        body: 'Time remaining: $timeText',
+        progress: secondsLeft,
+        maxProgress: _getMaxSeconds(),
+        force: force,
+      );
+    } catch (e) {
+      print('Error updating notification: $e');
+    }
+  }
+
+  // Get maximum seconds for current timer mode
+  int _getMaxSeconds() {
+    return _modeDuration(currentMode);
+  }
+
+  void _playAlarm() async {
     // Simpan volume musik saat ini
     double originalMusicVolume = 0.5; // Volume default musik
     bool wasMusicPlaying = _isMusicPlaying;
-    
+
     // Jika musik sedang berjalan, turunkan volume secara bertahap (fade out)
     if (_isMusicPlaying) {
       for (double volume = originalMusicVolume; volume >= 0.1; volume -= 0.1) {
@@ -339,11 +453,11 @@ class _PomodoroPageState extends State<PomodoroPage> {
         await Future.delayed(const Duration(milliseconds: 100));
       }
     }
-    
+
     // Set volume alarm lebih keras dan mainkan
     await _alarmPlayer.setVolume(1.0); // Volume maksimal
     await _alarmPlayer.play(AssetSource('sounds/alarm.mp3'));
-    
+
     // Tunggu alarm selesai dengan Future.delayed
     _alarmPlayer.getDuration().then((duration) {
       if (duration != null) {
@@ -613,10 +727,10 @@ class _PomodoroPageState extends State<PomodoroPage> {
   void _showThemeBottomSheet(BuildContext context) {
     final List<Map<String, dynamic>> themeList = [
       {
-        'name': 'Coffee',
+        'name': 'Caramel Latte',
         'icon': Icons.coffee,
         'color': const Color(0xFF8B4513),
-        'description': 'Warm coffee vibes',
+        'description': 'Sweet & cozy',
       },
       {
         'name': 'Ocean Mist',
@@ -856,7 +970,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
         'name': 'White Noise',
         'icon': Icons.graphic_eq,
         'color': const Color(0xFF9E9E9E),
-        'description': 'Focus enhancing',
+        'description': 'Peaceful silence',
         'file': 'assets/sounds/ambience/whitenoise.mp3'
       },
       {
@@ -1360,7 +1474,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
           color: isSelected
               ? _currentThemeColors['buttonActive']
               : _currentThemeColors['buttonInactive'],
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           border: isSelected
               ? null
               : Border.all(color: _currentThemeColors['buttonActive']!),
