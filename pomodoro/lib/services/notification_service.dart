@@ -69,13 +69,13 @@ class NotificationService {
     required int maxProgress,
     bool force = false,
   }) async {
-    // Throttling: only update notification every 1 second for smooth countdown
+    // Throttling: only update notification every 500ms for smoother countdown
     if (!force) {
       final now = DateTime.now();
       if (_lastNotificationUpdate != null &&
           now.difference(_lastNotificationUpdate!) <
-              const Duration(seconds: 1)) {
-        return; // Skip update if less than 1 second since last update
+              const Duration(milliseconds: 500)) {
+        return; // Skip update if less than 500ms since last update
       }
       _lastNotificationUpdate = now;
     }

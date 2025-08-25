@@ -40,7 +40,7 @@ class BackgroundService {
           isForegroundMode: true,
           notificationChannelId: 'pomodoro_timer_channel',
           initialNotificationTitle: 'ZenDo Pomodoro Timer',
-          initialNotificationContent: '',
+          initialNotificationContent: 'Pomodoro timer service ready',
         ),
         iosConfiguration: IosConfiguration(
           autoStart: false,

@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'page/splashscreen.dart';
 import 'services/notification_service.dart';
-import 'services/background_service.dart';
 import 'services/permission_service.dart';
 import 'models/pomodoro_state.dart';
 
@@ -22,8 +21,7 @@ void main() async {
   // Initialize notification service
   await NotificationService.initialize();
 
-  // Initialize background service
-  await BackgroundService.initialize();
+  // Background service removed - using flutter_local_notifications instead
 
   runApp(const PomodoroApp());
 }
